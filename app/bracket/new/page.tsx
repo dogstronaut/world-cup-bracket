@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ROUND_OF_32, TEAM_FLAGS, applyPick } from '@/lib/bracket';
 import { emptyPicks } from '@/lib/scoring';
@@ -86,6 +86,7 @@ function MatchCard({
 // ─── Page ─────────────────────────────────────────
 export default function NewBracketPage() {
   const router = useRouter();
+  const topRef = useRef<HTMLDivElement>(null);
   const [name, setName]           = useState('');
   const [picks, setPicks]         = useState<Picks>(emptyPicks());
   const [activeRound, setRound]   = useState(0);
@@ -100,6 +101,10 @@ export default function NewBracketPage() {
 
   function handlePick(round: number, i: number, team: string) {
     setPicks(prev => applyPick(prev, round, i, team));
+  }
+
+  function scrollTop() {
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   const totalPicks = ROUND_KEYS.reduce((s, k) => s + picks[k].filter(Boolean).length, 0);
@@ -127,7 +132,7 @@ export default function NewBracketPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-lg mx-auto">
+    <div ref={topRef} className="space-y-5 max-w-lg mx-auto">
 
       {/* Header */}
       <div className="text-center">
@@ -160,7 +165,7 @@ export default function NewBracketPage() {
             <button
               key={r}
               type="button"
-              onClick={() => { setRound(r); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              onClick={() => { setRound(r); scrollTop(); }}
               className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all border ${
                 active ? 'bg-[#FFD700] text-[#050d1a] border-[#FFD700]' :
                 done   ? 'bg-[#0a2030] text-green-400 border-green-700' :
@@ -207,7 +212,7 @@ export default function NewBracketPage() {
         {activeRound > 0 && (
           <button
             type="button"
-            onClick={() => { setRound(r => r - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onClick={() => { setRound(r => r - 1); scrollTop(); }}
             className="flex-1 py-3 rounded-xl border border-[#1a3a60] text-[#8899aa] text-sm font-bold hover:border-[#4a6a90] hover:text-white transition-colors"
           >
             ← {ROUND_SHORT[activeRound - 1]}
@@ -216,7 +221,7 @@ export default function NewBracketPage() {
         {activeRound < 4 && (
           <button
             type="button"
-            onClick={() => { setRound(r => r + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onClick={() => { setRound(r => r + 1); scrollTop(); }}
             disabled={!roundDone(activeRound)}
             className={`flex-1 py-3 rounded-xl text-sm font-bold transition-colors ${
               roundDone(activeRound)
