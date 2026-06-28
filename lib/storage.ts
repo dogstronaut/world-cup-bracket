@@ -15,26 +15,32 @@ const _data = g._wcbData;
 const _sets = g._wcbSets;
 
 const mem = {
-  get: (k: string): string | null => _data.get(k) ?? null,
-  set: (k: string, v: string): void => { _data.set(k, v); },
-  del: (k: string): void => { _data.delete(k); _sets.delete(k); },
-  sadd: (k: string, v: string): void => {
+  getObj: <T>(k: string): T | null => {
+    const s = _data.get(k);
+    return s ? JSON.parse(s) as T : null;
+  },
+  setObj: (k: string, v: unknown): void => { _data.set(k, JSON.stringify(v)); },
+  del:    (k: string): void => { _data.delete(k); _sets.delete(k); },
+  sadd:   (k: string, v: string): void => {
     if (!_sets.has(k)) _sets.set(k, new Set());
     _sets.get(k)!.add(v);
   },
-  srem: (k: string, v: string): void => { _sets.get(k)?.delete(v); },
-  smembers: (k: string): string[] => Array.from(_sets.get(k) ?? []),
+  srem:      (k: string, v: string): void => { _sets.get(k)?.delete(v); },
+  smembers:  (k: string): string[] => Array.from(_sets.get(k) ?? []),
 };
 
-// ---------- KV helpers (lazily imported to avoid errors when not configured) ----------
-async function kvGet(key: string): Promise<string | null> {
-  if (USE_MEMORY) return mem.get(key);
+// ---------- KV helpers ----------
+// @vercel/kv auto-deserializes stored JSON, so we use native object storage
+// (no JSON.stringify/parse at the call sites).
+
+async function kvGetObj<T>(key: string): Promise<T | null> {
+  if (USE_MEMORY) return mem.getObj<T>(key);
   const { kv } = await import('@vercel/kv');
-  return kv.get<string>(key);
+  return kv.get<T>(key);
 }
 
-async function kvSet(key: string, value: string): Promise<void> {
-  if (USE_MEMORY) { mem.set(key, value); return; }
+async function kvSetObj(key: string, value: unknown): Promise<void> {
+  if (USE_MEMORY) { mem.setObj(key, value); return; }
   const { kv } = await import('@vercel/kv');
   await kv.set(key, value);
 }
@@ -65,30 +71,27 @@ async function kvSmembers(key: string): Promise<string[]> {
 
 // ---------- Constants ----------
 const BRACKETS_SET_KEY = 'brackets';
-const RESULTS_KEY = 'results';
-const SYNC_LOG_KEY = 'sync_log';
-const LAST_SYNC_KEY = 'last_sync';
+const RESULTS_KEY      = 'results';
+const SYNC_LOG_KEY     = 'sync_log';
+const LAST_SYNC_KEY    = 'last_sync';
 
 // ---------- Bracket operations ----------
 export async function saveBracket(bracket: Bracket): Promise<void> {
   await Promise.all([
-    kvSet(`bracket:${bracket.id}`, JSON.stringify(bracket)),
+    kvSetObj(`bracket:${bracket.id}`, bracket),
     kvSadd(BRACKETS_SET_KEY, bracket.id),
   ]);
 }
 
 export async function getBracket(id: string): Promise<Bracket | null> {
-  const data = await kvGet(`bracket:${id}`);
-  if (!data) return null;
-  return JSON.parse(data) as Bracket;
+  return kvGetObj<Bracket>(`bracket:${id}`);
 }
 
 export async function getAllBrackets(): Promise<Bracket[]> {
   const ids = await kvSmembers(BRACKETS_SET_KEY);
   if (!ids || ids.length === 0) return [];
-  const bracketData = await Promise.all(ids.map(id => kvGet(`bracket:${id}`)));
-  return (bracketData.filter(Boolean) as string[])
-    .map(d => JSON.parse(d) as Bracket)
+  const brackets = await Promise.all(ids.map(id => kvGetObj<Bracket>(`bracket:${id}`)));
+  return (brackets.filter(Boolean) as Bracket[])
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 }
 
@@ -111,35 +114,33 @@ export async function deleteAllBrackets(): Promise<void> {
 
 // ---------- Results operations ----------
 export async function getResults(): Promise<Results> {
-  const data = await kvGet(RESULTS_KEY);
+  const data = await kvGetObj<Results>(RESULTS_KEY);
   if (!data) return emptyResults();
-  return { ...emptyResults(), ...JSON.parse(data) };
+  return { ...emptyResults(), ...data };
 }
 
 export async function saveResults(results: Results): Promise<void> {
-  await kvSet(RESULTS_KEY, JSON.stringify(results));
+  await kvSetObj(RESULTS_KEY, results);
 }
 
 export async function resetResults(): Promise<void> {
-  await kvSet(RESULTS_KEY, JSON.stringify(emptyResults()));
+  await kvSetObj(RESULTS_KEY, emptyResults());
 }
 
 // ---------- Sync log operations ----------
 export async function addSyncLog(entry: SyncLogEntry): Promise<void> {
-  const existing = await kvGet(SYNC_LOG_KEY);
-  const log: SyncLogEntry[] = existing ? JSON.parse(existing) : [];
+  const log = (await kvGetObj<SyncLogEntry[]>(SYNC_LOG_KEY)) ?? [];
   log.unshift(entry);
   await Promise.all([
-    kvSet(SYNC_LOG_KEY, JSON.stringify(log.slice(0, 50))),
-    kvSet(LAST_SYNC_KEY, entry.timestamp),
+    kvSetObj(SYNC_LOG_KEY, log.slice(0, 50)),
+    kvSetObj(LAST_SYNC_KEY, entry.timestamp),
   ]);
 }
 
 export async function getSyncLog(): Promise<SyncLogEntry[]> {
-  const data = await kvGet(SYNC_LOG_KEY);
-  return data ? JSON.parse(data) : [];
+  return (await kvGetObj<SyncLogEntry[]>(SYNC_LOG_KEY)) ?? [];
 }
 
 export async function getLastSync(): Promise<string | null> {
-  return kvGet(LAST_SYNC_KEY);
+  return kvGetObj<string>(LAST_SYNC_KEY);
 }
