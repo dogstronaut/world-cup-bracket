@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy-950: #050d1a;
+  --navy-900: #0a1628;
+  --navy-800: #0f2040;
+  --navy-700: #1a3060;
+  --gold-500: #FFD700;
+  --gold-400: #FFE57F;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--navy-900);
+  color: white;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--navy-800);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--navy-700);
+  border-radius: 3px;
+}
+
+/* Bracket connector lines */
+.bracket-line {
+  border-color: #1a3a60;
+}
