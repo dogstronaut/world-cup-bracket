@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ROUND_OF_32, TEAM_FLAGS, applyPick } from '@/lib/bracket';
 import { emptyPicks } from '@/lib/scoring';
@@ -86,7 +86,6 @@ function MatchCard({
 // ─── Page ─────────────────────────────────────────
 export default function NewBracketPage() {
   const router = useRouter();
-  const topRef = useRef<HTMLDivElement>(null);
   const [name, setName]           = useState('');
   const [picks, setPicks]         = useState<Picks>(emptyPicks());
   const [activeRound, setRound]   = useState(0);
@@ -104,7 +103,7 @@ export default function NewBracketPage() {
   }
 
   function scrollTop() {
-    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => window.scrollTo(0, 0), 0);
   }
 
   const totalPicks = ROUND_KEYS.reduce((s, k) => s + picks[k].filter(Boolean).length, 0);
@@ -132,7 +131,7 @@ export default function NewBracketPage() {
   }
 
   return (
-    <div ref={topRef} className="space-y-5 max-w-lg mx-auto">
+    <div className="space-y-5 max-w-lg mx-auto">
 
       {/* Header */}
       <div className="text-center">
