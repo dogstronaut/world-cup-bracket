@@ -95,6 +95,12 @@ export async function getAllBrackets(): Promise<Bracket[]> {
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 }
 
+export async function updateBracketName(id: string, name: string): Promise<void> {
+  const bracket = await getBracket(id);
+  if (!bracket) return;
+  await kvSetObj(`bracket:${id}`, { ...bracket, name });
+}
+
 export async function deleteBracket(id: string): Promise<void> {
   await Promise.all([
     kvDel(`bracket:${id}`),

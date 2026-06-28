@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSyncLog, getLastSync, getResults, saveResults, resetResults, deleteAllBrackets, getAllBrackets, deleteBracket } from '@/lib/storage';
+import { getSyncLog, getLastSync, getResults, saveResults, resetResults, deleteAllBrackets, getAllBrackets, deleteBracket, updateBracketName } from '@/lib/storage';
 import { syncResults } from '@/lib/sync';
 
 function checkAuth(request: NextRequest) {
@@ -31,6 +31,13 @@ export async function POST(request: NextRequest) {
     if (action === 'delete_all_brackets') {
       await deleteAllBrackets();
       return NextResponse.json({ success: true, message: 'All brackets deleted' });
+    }
+
+    if (action === 'rename_bracket') {
+      const { id, name } = body;
+      if (!id || !name?.trim()) return NextResponse.json({ error: 'Missing id or name' }, { status: 400 });
+      await updateBracketName(id, name.trim());
+      return NextResponse.json({ success: true, message: `Renamed to "${name.trim()}"` });
     }
 
     if (action === 'delete_bracket') {

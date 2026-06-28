@@ -14,6 +14,8 @@ export default function AdminPage() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [results, setResults] = useState<Results | null>(null);
   const [brackets, setBrackets] = useState<{ id: string; name: string; createdAt: string }[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
@@ -223,20 +225,64 @@ export default function AdminPage() {
         ) : (
           <div className="space-y-2">
             {brackets.map(b => (
-              <div key={b.id} className="flex items-center justify-between bg-[#050d1a] border border-[#1a3a60] rounded-lg px-4 py-2.5">
-                <div>
-                  <p className="text-white font-semibold text-sm">{b.name}</p>
-                  <p className="text-[#4a6a90] text-xs">{new Date(b.createdAt).toLocaleString()}</p>
+              <div key={b.id} className="bg-[#050d1a] border border-[#1a3a60] rounded-lg px-4 py-2.5 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-white font-semibold text-sm truncate">{b.name}</p>
+                    <p className="text-[#4a6a90] text-xs">{new Date(b.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => { setEditingId(b.id); setEditingName(b.name); }}
+                      className="text-[#FFD700] hover:text-white text-xs font-bold border border-[#4a4a20] hover:border-[#FFD700] px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Rename
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Delete ${b.name}'s bracket? This cannot be undone.`)) return;
+                        await adminAction({ action: 'delete_bracket', id: b.id });
+                      }}
+                      className="text-red-400 hover:text-red-300 text-xs font-bold border border-red-800 hover:border-red-600 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={async () => {
-                    if (!confirm(`Delete ${b.name}'s bracket? This cannot be undone.`)) return;
-                    await adminAction({ action: 'delete_bracket', id: b.id });
-                  }}
-                  className="text-red-400 hover:text-red-300 text-xs font-bold border border-red-800 hover:border-red-600 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  Delete
-                </button>
+                {editingId === b.id && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={e => setEditingName(e.target.value)}
+                      maxLength={50}
+                      className="flex-1 bg-[#0f2040] border border-[#FFD700] rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none"
+                      onKeyDown={async e => {
+                        if (e.key === 'Enter') {
+                          await adminAction({ action: 'rename_bracket', id: b.id, name: editingName });
+                          setEditingId(null);
+                        }
+                        if (e.key === 'Escape') setEditingId(null);
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      onClick={async () => {
+                        await adminAction({ action: 'rename_bracket', id: b.id, name: editingName });
+                        setEditingId(null);
+                      }}
+                      className="bg-[#FFD700] text-[#050d1a] text-xs font-black px-3 py-1.5 rounded-lg hover:bg-[#FFE57F]"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="text-[#8899aa] text-xs font-bold px-2 py-1.5"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
