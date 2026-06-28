@@ -1,4 +1,4 @@
-import { Bracket, Results, SyncLogEntry } from './types';
+import { Bracket, Results, SyncLogEntry, RecapEntry } from './types';
 import { emptyResults } from './scoring';
 import { ROUND_OF_32 } from './bracket';
 
@@ -167,4 +167,33 @@ export async function getSyncLog(): Promise<SyncLogEntry[]> {
 
 export async function getLastSync(): Promise<string | null> {
   return kvGetObj<string>(LAST_SYNC_KEY);
+}
+
+// ---------- Recap operations ----------
+const RECAPS_SET_KEY = 'recaps';
+
+export async function saveRecap(recap: RecapEntry): Promise<void> {
+  await Promise.all([
+    kvSetObj(`recap:${recap.date}`, recap),
+    kvSadd(RECAPS_SET_KEY, recap.date),
+  ]);
+}
+
+export async function getRecap(date: string): Promise<RecapEntry | null> {
+  return kvGetObj<RecapEntry>(`recap:${date}`);
+}
+
+export async function getAllRecaps(): Promise<RecapEntry[]> {
+  const dates = await kvSmembers(RECAPS_SET_KEY);
+  if (!dates || dates.length === 0) return [];
+  const recaps = await Promise.all(dates.map(date => kvGetObj<RecapEntry>(`recap:${date}`)));
+  return (recaps.filter(Boolean) as RecapEntry[])
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+export async function deleteRecap(date: string): Promise<void> {
+  await Promise.all([
+    kvDel(`recap:${date}`),
+    kvSrem(RECAPS_SET_KEY, date),
+  ]);
 }

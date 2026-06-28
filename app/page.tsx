@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { getAllBrackets, getResults } from '@/lib/storage';
+import { getAllBrackets, getResults, getAllRecaps } from '@/lib/storage';
 import { calculateScore } from '@/lib/scoring';
 import { TEAM_FLAGS } from '@/lib/bracket';
-import { ScoredBracket } from '@/lib/types';
+import { ScoredBracket, RecapEntry } from '@/lib/types';
 
 export const revalidate = 30;
 
@@ -10,10 +10,11 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 
 export default async function HomePage() {
   let scoredBrackets: ScoredBracket[] = [];
+  let latestRecap: RecapEntry | null = null;
   let error = false;
 
   try {
-    const [brackets, results] = await Promise.all([getAllBrackets(), getResults()]);
+    const [brackets, results, recaps] = await Promise.all([getAllBrackets(), getResults(), getAllRecaps()]);
     scoredBrackets = brackets
       .map(b => ({ ...b, score: calculateScore(b.picks, results) }))
       .sort((a, b) =>
@@ -21,12 +22,26 @@ export default async function HomePage() {
         b.score.correct - a.score.correct ||
         a.name.localeCompare(b.name)
       );
+    latestRecap = recaps.length > 0 ? recaps[0] : null;
   } catch {
     error = true;
   }
 
   return (
     <div className="space-y-10">
+      {/* Daily Recap */}
+      {latestRecap && (
+        <section className="bg-[#0f2040] border-2 border-[#FFD700] rounded-xl p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📰</span>
+            <h2 className="font-black text-[#FFD700] uppercase tracking-wide text-sm">Match Day Recap</h2>
+            <span className="ml-auto text-xs text-[#8899aa]">{latestRecap.date}</span>
+          </div>
+          <h3 className="text-white font-black text-xl leading-snug">{latestRecap.title}</h3>
+          <p className="text-[#c8d8e8] text-sm leading-relaxed whitespace-pre-line">{latestRecap.body}</p>
+        </section>
+      )}
+
       {/* Hero */}
       <section className="text-center space-y-5 py-6">
         <div className="space-y-2">

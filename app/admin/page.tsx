@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { ROUND_OF_32, ROUND_NAMES, ROUND_SIZES, ALL_TEAMS, TEAM_FLAGS } from '@/lib/bracket';
-import { Results, SyncLogEntry } from '@/lib/types';
+import { Results, SyncLogEntry, RecapEntry } from '@/lib/types';
 
 const ROUND_KEYS = ['r0', 'r1', 'r2', 'r3', 'r4'] as const;
 
@@ -16,6 +16,10 @@ export default function AdminPage() {
   const [brackets, setBrackets] = useState<{ id: string; name: string; createdAt: string }[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [recaps, setRecaps] = useState<RecapEntry[]>([]);
+  const [recapDate, setRecapDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [recapTitle, setRecapTitle] = useState('');
+  const [recapBody, setRecapBody] = useState('');
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
@@ -30,6 +34,7 @@ export default function AdminPage() {
     setLastSync(data.lastSync || null);
     setResults(data.results || null);
     setBrackets(data.brackets || []);
+    setRecaps(data.recaps || []);
     return true;
   }, []);
 
@@ -283,6 +288,84 @@ export default function AdminPage() {
                     </button>
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Daily Recap */}
+      <div className="bg-[#0f2040] border border-[#1a3a60] rounded-xl p-5 space-y-4">
+        <h2 className="font-bold text-white">📰 Daily Recap</h2>
+        <p className="text-[#8899aa] text-sm">Write and publish a match day recap that appears at the top of the homepage.</p>
+
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Date</label>
+              <input
+                type="date"
+                value={recapDate}
+                onChange={e => setRecapDate(e.target.value)}
+                className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#FFD700]"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Title</label>
+              <input
+                type="text"
+                value={recapTitle}
+                onChange={e => setRecapTitle(e.target.value)}
+                placeholder="e.g. Group Stage Day 3 Highlights"
+                maxLength={120}
+                className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a5568] focus:outline-none focus:border-[#FFD700]"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Body</label>
+            <textarea
+              value={recapBody}
+              onChange={e => setRecapBody(e.target.value)}
+              placeholder="Write the recap here..."
+              rows={5}
+              className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a5568] focus:outline-none focus:border-[#FFD700] resize-y"
+            />
+          </div>
+
+          <button
+            onClick={async () => {
+              if (!recapDate || !recapTitle.trim() || !recapBody.trim()) return;
+              await adminAction({ action: 'save_recap', date: recapDate, title: recapTitle, body: recapBody });
+              setRecapTitle('');
+              setRecapBody('');
+            }}
+            disabled={!recapDate || !recapTitle.trim() || !recapBody.trim()}
+            className="bg-[#FFD700] text-[#050d1a] font-black px-5 py-2 rounded-lg hover:bg-[#FFE57F] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Save Recap
+          </button>
+        </div>
+
+        {recaps.length > 0 && (
+          <div className="space-y-2 pt-2 border-t border-[#1a3a60]">
+            <h3 className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Saved Recaps</h3>
+            {recaps.map(r => (
+              <div key={r.date} className="bg-[#050d1a] border border-[#1a3a60] rounded-lg px-4 py-2.5 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-white font-semibold text-sm truncate">{r.title}</p>
+                  <p className="text-[#4a6a90] text-xs">{r.date}</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!confirm(`Delete recap for ${r.date}? This cannot be undone.`)) return;
+                    await adminAction({ action: 'delete_recap', date: r.date });
+                  }}
+                  className="text-red-400 hover:text-red-300 text-xs font-bold border border-red-800 hover:border-red-600 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                >
+                  Delete
+                </button>
               </div>
             ))}
           </div>

@@ -46,3 +46,10 @@ export interface SyncLogEntry {
   message: string;
   changes?: number;
 }
+
+export interface RecapEntry {
+  date: string;
+  title: string;
+  body: string;
+  createdAt: string;
+}
