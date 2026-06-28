@@ -20,6 +20,7 @@ export default function AdminPage() {
   const [recapDate, setRecapDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [recapTitle, setRecapTitle] = useState('');
   const [recapBody, setRecapBody] = useState('');
+  const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
@@ -297,43 +298,64 @@ export default function AdminPage() {
       {/* Daily Recap */}
       <div className="bg-[#0f2040] border border-[#1a3a60] rounded-xl p-5 space-y-4">
         <h2 className="font-bold text-white">📰 Daily Recap</h2>
-        <p className="text-[#8899aa] text-sm">Write and publish a match day recap that appears at the top of the homepage.</p>
+        <p className="text-[#8899aa] text-sm">Auto-generate a recap from live bracket data, or write one manually. Posts to the top of the homepage.</p>
 
         <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Date</label>
-              <input
-                type="date"
-                value={recapDate}
-                onChange={e => setRecapDate(e.target.value)}
-                className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#FFD700]"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Title</label>
-              <input
-                type="text"
-                value={recapTitle}
-                onChange={e => setRecapTitle(e.target.value)}
-                placeholder="e.g. Group Stage Day 3 Highlights"
-                maxLength={120}
-                className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a5568] focus:outline-none focus:border-[#FFD700]"
-              />
-            </div>
+          {/* Date picker */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Date</label>
+            <input
+              type="date"
+              value={recapDate}
+              onChange={e => setRecapDate(e.target.value)}
+              className="bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#FFD700]"
+            />
           </div>
 
+          {/* Auto-generate */}
+          <button
+            onClick={async () => {
+              if (!recapDate) return;
+              setGenerating(true);
+              const data = await adminAction({ action: 'generate_recap', date: recapDate });
+              if (data?.title) setRecapTitle(data.title);
+              if (data?.body) setRecapBody(data.body);
+              setGenerating(false);
+            }}
+            disabled={generating || !recapDate}
+            className="w-full bg-[#FFD700] text-[#050d1a] font-black px-5 py-2.5 rounded-lg hover:bg-[#FFE57F] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {generating ? '✍️ Generating recap...' : '⚡ Auto-Generate & Post Recap'}
+          </button>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 border-t border-[#1a3060]" />
+            <span className="text-[#4a6a90] text-xs">or write manually</span>
+            <div className="flex-1 border-t border-[#1a3060]" />
+          </div>
+
+          {/* Manual title + body */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Title</label>
+            <input
+              type="text"
+              value={recapTitle}
+              onChange={e => setRecapTitle(e.target.value)}
+              placeholder="e.g. Day 2: Brazil Dominates!"
+              maxLength={120}
+              className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a5568] focus:outline-none focus:border-[#FFD700]"
+            />
+          </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Body</label>
             <textarea
               value={recapBody}
               onChange={e => setRecapBody(e.target.value)}
-              placeholder="Write the recap here..."
-              rows={5}
+              placeholder="Recap body (auto-filled after generating, or type your own)..."
+              rows={6}
               className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a5568] focus:outline-none focus:border-[#FFD700] resize-y"
             />
           </div>
-
           <button
             onClick={async () => {
               if (!recapDate || !recapTitle.trim() || !recapBody.trim()) return;
@@ -342,9 +364,9 @@ export default function AdminPage() {
               setRecapBody('');
             }}
             disabled={!recapDate || !recapTitle.trim() || !recapBody.trim()}
-            className="bg-[#FFD700] text-[#050d1a] font-black px-5 py-2 rounded-lg hover:bg-[#FFE57F] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="bg-[#1a4a70] text-white font-bold px-5 py-2 rounded-lg hover:bg-[#2a5a90] border border-[#2a6a90] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Save Recap
+            Save Manual Recap
           </button>
         </div>
 

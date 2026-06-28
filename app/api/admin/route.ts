@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSyncLog, getLastSync, getResults, saveResults, resetResults, deleteAllBrackets, getAllBrackets, deleteBracket, updateBracketName, saveRecap, getAllRecaps, deleteRecap } from '@/lib/storage';
 import { syncResults } from '@/lib/sync';
+import { generateAndPostRecap } from '@/lib/recapGen';
 
 function checkAuth(request: NextRequest) {
   const auth = request.headers.get('authorization');
@@ -62,6 +63,13 @@ export async function POST(request: NextRequest) {
 
     if (action === 'trigger_sync') {
       const result = await syncResults();
+      return NextResponse.json(result);
+    }
+
+    if (action === 'generate_recap') {
+      const { date } = body;
+      if (!date) return NextResponse.json({ error: 'Missing date' }, { status: 400 });
+      const result = await generateAndPostRecap(date);
       return NextResponse.json(result);
     }
 
