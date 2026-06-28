@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSyncLog, getLastSync, getResults, saveResults, resetResults, deleteAllBrackets } from '@/lib/storage';
+import { getSyncLog, getLastSync, getResults, saveResults, resetResults, deleteAllBrackets, getAllBrackets, deleteBracket } from '@/lib/storage';
 import { syncResults } from '@/lib/sync';
 
 function checkAuth(request: NextRequest) {
@@ -10,8 +10,8 @@ function checkAuth(request: NextRequest) {
 export async function GET(request: NextRequest) {
   if (!checkAuth(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    const [syncLog, lastSync, results] = await Promise.all([getSyncLog(), getLastSync(), getResults()]);
-    return NextResponse.json({ syncLog, lastSync, results });
+    const [syncLog, lastSync, results, brackets] = await Promise.all([getSyncLog(), getLastSync(), getResults(), getAllBrackets()]);
+    return NextResponse.json({ syncLog, lastSync, results, brackets });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch admin data' }, { status: 500 });
   }
@@ -31,6 +31,13 @@ export async function POST(request: NextRequest) {
     if (action === 'delete_all_brackets') {
       await deleteAllBrackets();
       return NextResponse.json({ success: true, message: 'All brackets deleted' });
+    }
+
+    if (action === 'delete_bracket') {
+      const { id } = body;
+      if (!id) return NextResponse.json({ error: 'Missing bracket id' }, { status: 400 });
+      await deleteBracket(id);
+      return NextResponse.json({ success: true, message: 'Bracket deleted' });
     }
 
     if (action === 'override_result') {

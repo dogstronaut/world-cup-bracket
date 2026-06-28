@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [syncLog, setSyncLog] = useState<SyncLogEntry[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [results, setResults] = useState<Results | null>(null);
+  const [brackets, setBrackets] = useState<{ id: string; name: string; createdAt: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
@@ -26,6 +27,7 @@ export default function AdminPage() {
     setSyncLog(data.syncLog || []);
     setLastSync(data.lastSync || null);
     setResults(data.results || null);
+    setBrackets(data.brackets || []);
     return true;
   }, []);
 
@@ -212,6 +214,34 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Submitted Brackets */}
+      <div className="bg-[#0f2040] border border-[#1a3a60] rounded-xl p-5 space-y-3">
+        <h2 className="font-bold text-white">📋 Submitted Brackets ({brackets.length})</h2>
+        {brackets.length === 0 ? (
+          <p className="text-[#8899aa] text-sm">No brackets submitted yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {brackets.map(b => (
+              <div key={b.id} className="flex items-center justify-between bg-[#050d1a] border border-[#1a3a60] rounded-lg px-4 py-2.5">
+                <div>
+                  <p className="text-white font-semibold text-sm">{b.name}</p>
+                  <p className="text-[#4a6a90] text-xs">{new Date(b.createdAt).toLocaleString()}</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!confirm(`Delete ${b.name}'s bracket? This cannot be undone.`)) return;
+                    await adminAction({ action: 'delete_bracket', id: b.id });
+                  }}
+                  className="text-red-400 hover:text-red-300 text-xs font-bold border border-red-800 hover:border-red-600 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Danger Zone */}
       <div className="bg-red-950 border border-red-800 rounded-xl p-5 space-y-4">
