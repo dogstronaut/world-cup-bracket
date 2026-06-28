@@ -48,38 +48,21 @@ export async function syncResults(): Promise<{ success: boolean; message: string
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   try {
-    const messages: any[] = [
-      {
-        role: 'user',
-        content: 'Search for the current 2026 FIFA World Cup knockout stage results and return them as the required JSON object.',
-      },
-    ];
-
-    let response: any = await (client.messages.create as any)({
+    // web_search_20250305 is a server-side tool — Anthropic executes the search
+    // automatically and the model gets the results in its context. No client-side
+    // tool-result loop needed; doing so with empty content caused hallucinations.
+    const response: any = await (client.messages.create as any)({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       system: SYNC_SYSTEM_PROMPT,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      messages,
+      messages: [
+        {
+          role: 'user',
+          content: 'Search for the current 2026 FIFA World Cup knockout stage results and return them as the required JSON object. Only include winners for matches that have ACTUALLY been played and completed — do NOT predict or guess future matches.',
+        },
+      ],
     });
-
-    // Handle multi-turn tool-use loop (web_search runs server-side but
-    // may still return stop_reason='tool_use' requiring a continuation)
-    let safetyLimit = 5;
-    while (response.stop_reason === 'tool_use' && safetyLimit-- > 0) {
-      messages.push({ role: 'assistant', content: response.content });
-      const toolResults = response.content
-        .filter((b: any) => b.type === 'tool_use')
-        .map((b: any) => ({ type: 'tool_result', tool_use_id: b.id, content: '' }));
-      messages.push({ role: 'user', content: toolResults });
-      response = await (client.messages.create as any)({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
-        system: SYNC_SYSTEM_PROMPT,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages,
-      });
-    }
 
     // Extract text from all content blocks
     let jsonText = '';
@@ -89,23 +72,31 @@ export async function syncResults(): Promise<{ success: boolean; message: string
       }
     }
 
-    // Extract JSON object from response
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error(`No JSON found in response. Response was: ${jsonText.slice(0, 200)}`);
+      throw new Error(`No JSON found in response. Got: ${jsonText.slice(0, 300)}`);
     }
 
     const newResults: Results = JSON.parse(jsonMatch[0]);
 
-    // Validate structure
     if (!Array.isArray(newResults.r0) || newResults.r0.length !== 16) {
-      throw new Error('Invalid results structure: r0 must be array of 16');
-    }
-    if (!Array.isArray(newResults.r1) || newResults.r1.length !== 8) {
-      throw new Error('Invalid results structure: r1 must be array of 8');
+      throw new Error('Invalid results structure');
     }
 
-    // Count changes vs current
+    // Validate R32 results: each winner must be one of the two teams in that match.
+    // This catches hallucinated results (e.g. a team that doesn't play in that slot).
+    for (let i = 0; i < 16; i++) {
+      const winner = newResults.r0[i];
+      if (winner !== null) {
+        const { home, away } = ROUND_OF_32[i];
+        if (winner !== home && winner !== away) {
+          console.warn(`Sync: invalid r0[${i}] winner "${winner}" (expected ${home} or ${away}) — clearing`);
+          newResults.r0[i] = null;
+        }
+      }
+    }
+
+    // Count changes vs current results
     const currentResults = await getResults();
     let changes = 0;
     const rounds = ['r0', 'r1', 'r2', 'r3', 'r4'] as const;

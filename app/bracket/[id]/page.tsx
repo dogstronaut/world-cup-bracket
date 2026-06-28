@@ -13,23 +13,33 @@ function MatchResult({
   pick, result, pts,
 }: { pick: string | null; result: string | null; pts: number }) {
   const isCorrect = result && pick === result;
-  const isWrong = result && pick && pick !== result;
-  const isPending = !result;
+  const isWrong   = result && pick && pick !== result;
 
+  if (isCorrect) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-semibold bg-green-900 text-green-300 border border-green-700">
+        {TEAM_FLAGS[pick!] || ''} {pick} <span className="text-green-400">+{pts}pts</span>
+      </span>
+    );
+  }
+  if (isWrong) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-semibold bg-red-950 text-red-400 border border-red-800">
+        <span className="line-through opacity-60">{TEAM_FLAGS[pick!] || ''} {pick}</span>
+        <span className="text-red-500 text-xs">0 pts</span>
+      </span>
+    );
+  }
+  if (pick) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-semibold bg-[#0f2040] text-white border border-[#1a3a60]">
+        {TEAM_FLAGS[pick] || ''} {pick}
+      </span>
+    );
+  }
   return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-semibold ${
-        isCorrect
-          ? 'bg-green-900 text-green-300 border border-green-700'
-          : isWrong
-          ? 'bg-red-950 text-red-300 border border-red-800 line-through opacity-70'
-          : isPending && pick
-          ? 'bg-[#0f2040] text-white border border-[#1a3a60]'
-          : 'bg-[#050d1a] text-[#8899aa] border border-[#1a3060] italic'
-      }`}
-    >
-      {pick ? `${TEAM_FLAGS[pick] || ''} ${pick}` : '—'}
-      {isCorrect && ` +${pts}pts`}
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-semibold bg-[#050d1a] text-[#8899aa] border border-[#1a3060] italic">
+      —
     </span>
   );
 }
