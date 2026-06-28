@@ -160,7 +160,7 @@ export default function NewBracketPage() {
             <button
               key={r}
               type="button"
-              onClick={() => setRound(r)}
+              onClick={() => { setRound(r); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all border ${
                 active ? 'bg-[#FFD700] text-[#050d1a] border-[#FFD700]' :
                 done   ? 'bg-[#0a2030] text-green-400 border-green-700' :
@@ -207,7 +207,7 @@ export default function NewBracketPage() {
         {activeRound > 0 && (
           <button
             type="button"
-            onClick={() => setRound(r => r - 1)}
+            onClick={() => { setRound(r => r - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             className="flex-1 py-3 rounded-xl border border-[#1a3a60] text-[#8899aa] text-sm font-bold hover:border-[#4a6a90] hover:text-white transition-colors"
           >
             ← {ROUND_SHORT[activeRound - 1]}
@@ -216,7 +216,7 @@ export default function NewBracketPage() {
         {activeRound < 4 && (
           <button
             type="button"
-            onClick={() => setRound(r => r + 1)}
+            onClick={() => { setRound(r => r + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             disabled={!roundDone(activeRound)}
             className={`flex-1 py-3 rounded-xl text-sm font-bold transition-colors ${
               roundDone(activeRound)
