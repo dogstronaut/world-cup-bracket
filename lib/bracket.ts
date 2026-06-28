@@ -1,24 +1,24 @@
 import { Match } from './types';
 
 export const ROUND_OF_32: Match[] = [
-  // Left half (0-7)
-  { home: 'Canada', away: 'South Africa', date: 'Jun 28' },
-  { home: 'Brazil', away: 'Japan', date: 'Jun 29' },
-  { home: 'Germany', away: 'Paraguay', date: 'Jun 29' },
-  { home: 'Netherlands', away: 'Morocco', date: 'Jun 29' },
-  { home: 'Ivory Coast', away: 'Norway', date: 'Jun 30' },
-  { home: 'France', away: 'Sweden', date: 'Jun 30' },
-  { home: 'Mexico', away: 'Ecuador', date: 'Jun 30' },
-  { home: 'England', away: 'DR Congo', date: 'Jul 1' },
-  // Right half (8-15)
-  { home: 'Belgium', away: 'Senegal', date: 'Jul 1' },
-  { home: 'USA', away: 'Bosnia-Herzegovina', date: 'Jul 1' },
-  { home: 'Spain', away: 'Austria', date: 'Jul 2' },
-  { home: 'Portugal', away: 'Croatia', date: 'Jul 2' },
-  { home: 'Switzerland', away: 'Algeria', date: 'Jul 2' },
-  { home: 'Australia', away: 'Egypt', date: 'Jul 3' },
-  { home: 'Argentina', away: 'Cape Verde', date: 'Jul 3' },
-  { home: 'Colombia', away: 'Ghana', date: 'Jul 3' },
+  // Left half (0-7) — pairs: (0,1)→R16[0], (2,3)→R16[1], (4,5)→R16[2], (6,7)→R16[3]
+  { home: 'Germany', away: 'Paraguay', date: 'Jun 29' },       // 0
+  { home: 'France', away: 'Sweden', date: 'Jun 30' },          // 1
+  { home: 'South Africa', away: 'Canada', date: 'Jun 28' },    // 2
+  { home: 'Netherlands', away: 'Morocco', date: 'Jun 29' },    // 3
+  { home: 'Portugal', away: 'Croatia', date: 'Jul 2' },        // 4
+  { home: 'Spain', away: 'Austria', date: 'Jul 2' },           // 5
+  { home: 'USA', away: 'Bosnia-Herzegovina', date: 'Jul 1' },  // 6
+  { home: 'Belgium', away: 'Senegal', date: 'Jul 1' },         // 7
+  // Right half (8-15) — pairs: (8,9)→R16[4], (10,11)→R16[5], (12,13)→R16[6], (14,15)→R16[7]
+  { home: 'Brazil', away: 'Japan', date: 'Jun 29' },           // 8
+  { home: 'Ivory Coast', away: 'Norway', date: 'Jun 30' },     // 9
+  { home: 'Mexico', away: 'Ecuador', date: 'Jun 30' },         // 10
+  { home: 'England', away: 'DR Congo', date: 'Jul 1' },        // 11
+  { home: 'Argentina', away: 'Cape Verde', date: 'Jul 3' },    // 12
+  { home: 'Australia', away: 'Egypt', date: 'Jul 3' },         // 13
+  { home: 'Switzerland', away: 'Algeria', date: 'Jul 2' },     // 14
+  { home: 'Colombia', away: 'Ghana', date: 'Jul 3' },          // 15
 ];
 
 export const TEAM_FLAGS: Record<string, string> = {
