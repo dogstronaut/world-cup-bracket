@@ -96,18 +96,35 @@ export async function syncResults(): Promise<{ success: boolean; message: string
       }
     }
 
-    // Count changes vs current results
+    // Merge with current results — only fill in slots that are null.
+    // Never overwrite a result that was already set (manually or by a previous sync).
+    // This prevents a bad sync from wiping out correct data.
     const currentResults = await getResults();
+    const merged = {
+      r0: [...currentResults.r0],
+      r1: [...currentResults.r1],
+      r2: [...currentResults.r2],
+      r3: [...currentResults.r3],
+      r4: [...currentResults.r4],
+      champion: currentResults.champion,
+    };
+
     let changes = 0;
     const rounds = ['r0', 'r1', 'r2', 'r3', 'r4'] as const;
     for (const round of rounds) {
       for (let i = 0; i < newResults[round].length; i++) {
-        if (newResults[round][i] !== currentResults[round][i]) changes++;
+        if (merged[round][i] === null && newResults[round][i]) {
+          merged[round][i] = newResults[round][i];
+          changes++;
+        }
       }
     }
-    if (newResults.champion !== currentResults.champion) changes++;
+    if (!merged.champion && newResults.champion) {
+      merged.champion = newResults.champion;
+      changes++;
+    }
 
-    await saveResults(newResults);
+    await saveResults(merged);
 
     const message = `Sync successful. ${changes} result(s) updated.`;
     await addSyncLog({ timestamp: new Date().toISOString(), success: true, message, changes });
