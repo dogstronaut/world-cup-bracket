@@ -1,5 +1,6 @@
 import { Bracket, Results, SyncLogEntry } from './types';
 import { emptyResults } from './scoring';
+import { ROUND_OF_32 } from './bracket';
 
 // Use in-memory store when Vercel KV is not configured (local dev / testing)
 const USE_MEMORY = !(process.env.KV_REST_API_URL || process.env.KV_URL);
@@ -122,7 +123,24 @@ export async function deleteAllBrackets(): Promise<void> {
 export async function getResults(): Promise<Results> {
   const data = await kvGetObj<Results>(RESULTS_KEY);
   if (!data) return emptyResults();
-  return { ...emptyResults(), ...data };
+  const results: Results = { ...emptyResults(), ...data };
+
+  // Sanitize R32: clear any winner that isn't one of the two teams in that slot.
+  // This auto-corrects bad data written by a hallucinating sync.
+  let dirty = false;
+  for (let i = 0; i < 16; i++) {
+    const winner = results.r0[i];
+    if (winner !== null) {
+      const { home, away } = ROUND_OF_32[i];
+      if (winner !== home && winner !== away) {
+        results.r0[i] = null;
+        dirty = true;
+      }
+    }
+  }
+  if (dirty) await kvSetObj(RESULTS_KEY, results);
+
+  return results;
 }
 
 export async function saveResults(results: Results): Promise<void> {
