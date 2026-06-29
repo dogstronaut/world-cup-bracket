@@ -29,6 +29,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Results reset' });
     }
 
+    if (action === 'clean_results') {
+      const results = await getResults();
+      let cleared = 0;
+      // r1[i] requires both r0[2i] and r0[2i+1]
+      for (let i = 0; i < 8; i++) {
+        if ((!results.r0[i * 2] || !results.r0[i * 2 + 1]) && results.r1[i]) {
+          results.r1[i] = null; cleared++;
+        }
+      }
+      // r2[i] requires both r1[2i] and r1[2i+1]
+      for (let i = 0; i < 4; i++) {
+        if ((!results.r1[i * 2] || !results.r1[i * 2 + 1]) && results.r2[i]) {
+          results.r2[i] = null; cleared++;
+        }
+      }
+      // r3[i] requires both r2[2i] and r2[2i+1]
+      for (let i = 0; i < 2; i++) {
+        if ((!results.r2[i * 2] || !results.r2[i * 2 + 1]) && results.r3[i]) {
+          results.r3[i] = null; cleared++;
+        }
+      }
+      // r4[0] requires both r3[0] and r3[1]
+      if ((!results.r3[0] || !results.r3[1]) && results.r4[0]) {
+        results.r4[0] = null; cleared++;
+      }
+      if (!results.r3[0] || !results.r3[1]) {
+        if (results.champion) { results.champion = null; cleared++; }
+      }
+      await saveResults(results);
+      return NextResponse.json({ success: true, message: `Cleaned ${cleared} invalid result(s)` });
+    }
+
     if (action === 'delete_all_brackets') {
       await deleteAllBrackets();
       return NextResponse.json({ success: true, message: 'All brackets deleted' });

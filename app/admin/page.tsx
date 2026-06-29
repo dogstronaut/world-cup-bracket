@@ -166,6 +166,18 @@ export default function AdminPage() {
         )}
       </div>
 
+      {/* Clean Results */}
+      <div className="bg-[#0f2040] border border-[#FFD700]/30 rounded-xl p-5 space-y-3">
+        <h2 className="font-bold text-white">🧹 Fix Bad Sync Data</h2>
+        <p className="text-[#8899aa] text-sm">Clears any Round of 16 / QF / SF / Final results that were incorrectly synced before those matches were played. Keeps all real Round of 32 results intact.</p>
+        <button
+          onClick={() => adminAction({ action: 'clean_results' })}
+          className="bg-[#FFD700] text-[#050d1a] font-black px-5 py-2.5 rounded-lg hover:bg-[#FFE57F] transition-colors"
+        >
+          🧹 Clean Invalid Results
+        </button>
+      </div>
+
       {/* Manual Override */}
       {results && (
         <div className="bg-[#0f2040] border border-[#1a3a60] rounded-xl p-5 space-y-5">
