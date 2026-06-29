@@ -11,9 +11,11 @@ You will receive text scraped from the ESPN World Cup schedule page as your PRIM
 You also have access to web_search to VERIFY any result you find — search for the specific match to confirm it is finished before including it.
 
 Rules:
-- Only include a result if BOTH the ESPN page AND your web search confirm the match is COMPLETED/FINAL.
+- Only include a result if BOTH the ESPN page AND your web search confirm the match is COMPLETED/FINAL with a final score.
 - If ESPN shows a result but you cannot verify it via web search, set that slot to null.
 - Do NOT guess, predict, or infer any result. Only report confirmed finished matches.
+- A match is only finished if you can find the final scoreline (e.g. "Brazil 2-1 Japan"). Scheduled, upcoming, or "preview" matches must be set to null.
+- IMPORTANT: Round of 16, Quarterfinals, Semifinals, and Final slots (r1–r4) should almost always be null since those matches happen weeks after Round of 32. Set them to null unless you have an explicit final score from a completed match.
 
 Use ONLY these EXACT team name spellings:
 Canada, South Africa, Brazil, Japan, Germany, Paraguay, Netherlands, Morocco, Ivory Coast, Norway, France, Sweden, Mexico, Ecuador, England, DR Congo, Belgium, Senegal, USA, Bosnia-Herzegovina, Spain, Austria, Portugal, Croatia, Switzerland, Algeria, Australia, Egypt, Argentina, Cape Verde, Colombia, Ghana
@@ -157,6 +159,38 @@ export async function syncResults(): Promise<{ success: boolean; message: string
           console.warn(`Sync: invalid r0[${i}] winner "${winner}" (${home} vs ${away}) — cleared`);
           newResults.r0[i] = null;
         }
+      }
+    }
+
+    // Chain validation: r1[i] requires r0[2i] and r0[2i+1] both filled (same for later rounds)
+    for (let i = 0; i < 8; i++) {
+      if (!newResults.r0[i * 2] || !newResults.r0[i * 2 + 1]) {
+        if (newResults.r1[i]) {
+          console.warn(`Sync: clearing hallucinated r1[${i}] — r0 pair not complete`);
+          newResults.r1[i] = null;
+        }
+      }
+    }
+    for (let i = 0; i < 4; i++) {
+      if (!newResults.r1[i * 2] || !newResults.r1[i * 2 + 1]) {
+        if (newResults.r2[i]) {
+          console.warn(`Sync: clearing hallucinated r2[${i}] — r1 pair not complete`);
+          newResults.r2[i] = null;
+        }
+      }
+    }
+    for (let i = 0; i < 2; i++) {
+      if (!newResults.r2[i * 2] || !newResults.r2[i * 2 + 1]) {
+        if (newResults.r3[i]) {
+          console.warn(`Sync: clearing hallucinated r3[${i}] — r2 pair not complete`);
+          newResults.r3[i] = null;
+        }
+      }
+    }
+    if (!newResults.r3[0] || !newResults.r3[1]) {
+      if (newResults.r4[0]) {
+        console.warn(`Sync: clearing hallucinated r4[0] — r3 pair not complete`);
+        newResults.r4[0] = null;
       }
     }
 
