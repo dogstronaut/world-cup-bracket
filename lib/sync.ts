@@ -88,6 +88,20 @@ async function fetchESPNPage(): Promise<string> {
   return text;
 }
 
+function extractBalancedJSON(text: string): string | null {
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
 export async function syncResults(): Promise<{ success: boolean; message: string; changes: number }> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -123,12 +137,12 @@ export async function syncResults(): Promise<{ success: boolean; message: string
       if ((block as any).type === 'text') jsonText += (block as any).text;
     }
 
-    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    const jsonStr = extractBalancedJSON(jsonText);
+    if (!jsonStr) {
       throw new Error(`No JSON in response. Got: ${jsonText.slice(0, 300)}`);
     }
 
-    const newResults: Results = JSON.parse(jsonMatch[0]);
+    const newResults: Results = JSON.parse(jsonStr);
 
     if (!Array.isArray(newResults.r0) || newResults.r0.length !== 16) {
       throw new Error('Invalid results structure returned');
