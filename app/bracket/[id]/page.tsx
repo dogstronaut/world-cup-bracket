@@ -188,12 +188,6 @@ export default async function BracketViewPage({
         >
           ← Leaderboard
         </Link>
-        <Link
-          href="/bracket/new"
-          className="bg-[#FFD700] text-[#050d1a] font-bold px-6 py-2 rounded-lg hover:bg-[#FFE57F] transition-colors"
-        >
-          + New Bracket
-        </Link>
       </div>
     </div>
   );
