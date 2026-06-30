@@ -99,9 +99,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'generate_recap') {
-      const { date } = body;
+      const { date, notes } = body;
       if (!date) return NextResponse.json({ error: 'Missing date' }, { status: 400 });
-      const result = await generateAndPostRecap(date);
+      const result = await generateAndPostRecap(date, notes);
       return NextResponse.json(result);
     }
 

@@ -119,7 +119,7 @@ Use line breaks generously for readability.
 Do NOT use markdown headers (##) — use emojis as section markers instead.
 Write the recap body only (no title — that is provided separately).`;
 
-export async function generateAndPostRecap(date: string): Promise<{ success: boolean; message: string; title: string; body: string }> {
+export async function generateAndPostRecap(date: string, notes?: string): Promise<{ success: boolean; message: string; title: string; body: string }> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   try {
@@ -130,6 +130,10 @@ export async function generateAndPostRecap(date: string): Promise<{ success: boo
       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
     });
 
+    const notesSection = notes?.trim()
+      ? `\n\n=== EMPHASIS NOTES FROM ADMIN ===\nMake sure to highlight these points in the recap:\n${notes.trim()}`
+      : '';
+
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1500,
@@ -137,7 +141,7 @@ export async function generateAndPostRecap(date: string): Promise<{ success: boo
       messages: [
         {
           role: 'user',
-          content: `Write the daily bracket recap for ${formattedDate}. Here is all the data you need:\n\n${context}\n\nWrite a fun, engaging recap. Include at least one interesting World Cup fact or piece of context. Call out bold/unique picks by name. Be specific with numbers (X out of Y got it right).`,
+          content: `Write the daily bracket recap for ${formattedDate}. Here is all the data you need:\n\n${context}${notesSection}\n\nWrite a fun, engaging recap. Include at least one interesting World Cup fact or piece of context. Call out bold/unique picks by name. Be specific with numbers (X out of Y got it right).`,
         },
       ],
     });

@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [editingName, setEditingName] = useState('');
   const [recaps, setRecaps] = useState<RecapEntry[]>([]);
   const [recapDate, setRecapDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [recapNotes, setRecapNotes] = useState('');
   const [recapTitle, setRecapTitle] = useState('');
   const [recapBody, setRecapBody] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -324,12 +325,24 @@ export default function AdminPage() {
             />
           </div>
 
+          {/* Emphasis notes */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Your Notes <span className="font-normal normal-case text-[#4a6a90]">(optional — tell Claude what to emphasize)</span></label>
+            <textarea
+              value={recapNotes}
+              onChange={e => setRecapNotes(e.target.value)}
+              placeholder="e.g. Brazil absolutely dominated Japan, call out anyone who picked the upset, Daniel's Paraguay pick is looking bold..."
+              rows={3}
+              className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a5568] focus:outline-none focus:border-[#FFD700] resize-y"
+            />
+          </div>
+
           {/* Auto-generate */}
           <button
             onClick={async () => {
               if (!recapDate) return;
               setGenerating(true);
-              const data = await adminAction({ action: 'generate_recap', date: recapDate });
+              const data = await adminAction({ action: 'generate_recap', date: recapDate, notes: recapNotes });
               if (data?.title) setRecapTitle(data.title);
               if (data?.body) setRecapBody(data.body);
               setGenerating(false);
