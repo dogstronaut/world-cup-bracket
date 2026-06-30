@@ -167,9 +167,7 @@ export async function generateAndPostRecap(date: string, notes?: string): Promis
 
     const title = (titleRes.content[0] as { type: 'text'; text: string }).text.trim();
 
-    await saveRecap({ date, title, body, createdAt: new Date().toISOString() });
-
-    return { success: true, message: 'Recap generated and posted', title, body };
+    return { success: true, message: 'Recap generated — review and post when ready', title, body };
   } catch (error) {
     return {
       success: false,

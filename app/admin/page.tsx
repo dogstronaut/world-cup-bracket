@@ -353,20 +353,20 @@ export default function AdminPage() {
             {generating ? '✍️ Generating recap...' : '⚡ Auto-Generate & Post Recap'}
           </button>
 
+          {/* Review area — shown after generate or for manual entry */}
           <div className="flex items-center gap-3">
             <div className="flex-1 border-t border-[#1a3060]" />
-            <span className="text-[#4a6a90] text-xs">or write manually</span>
+            <span className="text-[#4a6a90] text-xs">review &amp; edit before posting</span>
             <div className="flex-1 border-t border-[#1a3060]" />
           </div>
 
-          {/* Manual title + body */}
           <div className="space-y-1">
             <label className="text-xs font-bold text-[#8899aa] uppercase tracking-wide">Title</label>
             <input
               type="text"
               value={recapTitle}
               onChange={e => setRecapTitle(e.target.value)}
-              placeholder="e.g. Day 2: Brazil Dominates!"
+              placeholder="Auto-filled after generating, or type your own..."
               maxLength={120}
               className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a5568] focus:outline-none focus:border-[#FFD700]"
             />
@@ -376,8 +376,8 @@ export default function AdminPage() {
             <textarea
               value={recapBody}
               onChange={e => setRecapBody(e.target.value)}
-              placeholder="Recap body (auto-filled after generating, or type your own)..."
-              rows={6}
+              placeholder="Auto-filled after generating, or type your own..."
+              rows={8}
               className="w-full bg-[#050d1a] border border-[#1a3a60] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a5568] focus:outline-none focus:border-[#FFD700] resize-y"
             />
           </div>
@@ -387,11 +387,12 @@ export default function AdminPage() {
               await adminAction({ action: 'save_recap', date: recapDate, title: recapTitle, body: recapBody });
               setRecapTitle('');
               setRecapBody('');
+              setRecapNotes('');
             }}
             disabled={!recapDate || !recapTitle.trim() || !recapBody.trim()}
-            className="bg-[#1a4a70] text-white font-bold px-5 py-2 rounded-lg hover:bg-[#2a5a90] border border-[#2a6a90] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-full bg-green-700 hover:bg-green-600 text-white font-black px-5 py-2.5 rounded-lg border border-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Save Manual Recap
+            ✅ Post to Homepage
           </button>
         </div>
 
