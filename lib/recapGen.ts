@@ -72,10 +72,24 @@ function buildRecapContext(brackets: Bracket[], results: Results, targetDate: st
     }
   }
 
-  // Upcoming matches (not yet played)
+  // Upcoming matches with pick breakdowns
   const upcoming = ROUND_OF_32
     .map((m, i) => ({ ...m, i }))
     .filter(m => !results.r0[m.i]);
+
+  const upcomingWithPicks = upcoming.map(m => {
+    const homePickers = brackets.filter(b => b.picks.r0[m.i] === m.home).map(b => b.name);
+    const awayPickers = brackets.filter(b => b.picks.r0[m.i] === m.away).map(b => b.name);
+    const noPick = brackets.filter(b => !b.picks.r0[m.i]).map(b => b.name);
+    return { ...m, homePickers, awayPickers, noPick };
+  });
+
+  // Next day's matches specifically
+  const tomorrow = upcomingWithPicks.filter(m => {
+    const matchDate = new Date(m.date + ' 2026').getTime();
+    const today = new Date(targetDate + 'T12:00:00Z').getTime();
+    return matchDate >= today;
+  }).slice(0, 6);
 
   return `
 TODAY'S DATE: ${targetDate}
@@ -99,8 +113,14 @@ ${champSorted.map(([team, names]) => `${team} ${TEAM_FLAGS[team] || ''}: ${names
 === BOLD / UNIQUE PICKS ===
 ${unusualPicks.length > 0 ? unusualPicks.join('\n') : 'No unique solo picks yet.'}
 
-=== UPCOMING MATCHES STILL TO PLAY ===
-${upcoming.map(m => `${m.home} vs ${m.away} — ${m.date}`).join('\n')}
+=== UPCOMING MATCHES WITH BRACKET PREDICTIONS ===
+(Use these to build anticipation — call out who's riding or risking on each match)
+${tomorrow.map(m => `
+${m.home} vs ${m.away} — ${m.date}
+  ${m.home}: ${m.homePickers.length} picker${m.homePickers.length !== 1 ? 's' : ''} (${m.homePickers.join(', ') || 'nobody'})
+  ${m.away}: ${m.awayPickers.length} picker${m.awayPickers.length !== 1 ? 's' : ''} (${m.awayPickers.join(', ') || 'nobody'})
+  ${m.noPick.length > 0 ? `No pick yet: ${m.noPick.join(', ')}` : 'Everyone has a pick'}
+`).join('\n')}
 `.trim();
 }
 
@@ -117,7 +137,14 @@ You can mention real World Cup context, fun football facts, or historical trivia
 Write in a natural, conversational tone — not too long, not too short.
 Use line breaks generously for readability.
 Do NOT use markdown headers (##) — use emojis as section markers instead.
-Write the recap body only (no title — that is provided separately).`;
+Write the recap body only (no title — that is provided separately).
+
+Structure every recap like this:
+1. Today's results — who won, how many people got it right, call out names specifically
+2. Leaderboard update — who's up, who's slipping, any drama at the top
+3. Looking ahead — for each upcoming match, say how many people picked each team by name. Build anticipation ("3 people are riding with France tomorrow — will they survive?")
+4. A fun World Cup fact or historical tidbit
+5. Bold/unique picks worth watching`;
 
 export async function generateAndPostRecap(date: string, notes?: string): Promise<{ success: boolean; message: string; title: string; body: string }> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
