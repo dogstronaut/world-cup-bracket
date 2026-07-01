@@ -6,36 +6,56 @@ import { Bracket, Results } from './types';
 
 const ROUND_KEYS = ['r0', 'r1', 'r2', 'r3', 'r4'] as const;
 
+// Convert "Jun 28", "Jul 1" etc. to a sortable number (month * 100 + day)
+function matchDateToSortKey(matchDate: string): number {
+  const months: Record<string, number> = { Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12 };
+  const [mon, day] = matchDate.split(' ');
+  return (months[mon] || 0) * 100 + parseInt(day || '0', 10);
+}
+
 function buildRecapContext(brackets: Bracket[], results: Results, targetDate: string): string {
-  // Find matches that completed on or before targetDate with a result set
-  const completedToday: { match: string; winner: string; round: string; index: number }[] = [];
+  const todayFormatted = formatMatchDate(targetDate); // e.g. "Jul 1"
+  const todayKey = matchDateToSortKey(todayFormatted);
 
-  for (let i = 0; i < 16; i++) {
-    if (results.r0[i] && ROUND_OF_32[i].date === formatMatchDate(targetDate)) {
-      completedToday.push({
-        match: `${ROUND_OF_32[i].home} vs ${ROUND_OF_32[i].away}`,
-        winner: results.r0[i]!,
-        round: 'Round of 32',
-        index: i,
-      });
-    }
+  // Build stats for every completed R32 match
+  function matchStats(i: number) {
+    const winner = results.r0[i]!;
+    const correctNames = brackets.filter(b => b.picks.r0[i] === winner).map(b => b.name);
+    const wrongNames = brackets.filter(b => b.picks.r0[i] && b.picks.r0[i] !== winner).map(b => b.name);
+    return {
+      match: `${ROUND_OF_32[i].home} vs ${ROUND_OF_32[i].away}`,
+      date: ROUND_OF_32[i].date,
+      winner,
+      correctNames,
+      wrongNames,
+      total: correctNames.length + wrongNames.length,
+    };
   }
 
-  // All completed results so far (for running stats)
-  const allCompleted: { round: string; index: number; winner: string }[] = [];
+  // Separate completed matches into "today" vs "previously"
+  const completedToday = [];
+  const completedPreviously = [];
   for (let i = 0; i < 16; i++) {
-    if (results.r0[i]) allCompleted.push({ round: 'r0', index: i, winner: results.r0[i]! });
+    if (!results.r0[i]) continue;
+    const s = matchStats(i);
+    if (ROUND_OF_32[i].date === todayFormatted) completedToday.push(s);
+    else completedPreviously.push(s);
   }
 
-  // Per-match bracket stats for completed matches
-  const matchStats = completedToday.map(({ match, winner, round, index }) => {
-    const rk = 'r0' as const;
-    const correct = brackets.filter(b => b.picks[rk][index] === winner).length;
-    const wrong = brackets.filter(b => b.picks[rk][index] && b.picks[rk][index] !== winner).length;
-    const correctNames = brackets.filter(b => b.picks[rk][index] === winner).map(b => b.name);
-    const wrongNames = brackets.filter(b => b.picks[rk][index] && b.picks[rk][index] !== winner).map(b => b.name);
-    return { match, winner, correct, wrong, correctNames, wrongNames, total: correct + wrong };
-  });
+  type UpcomingMatch = { match: string; date: string; home: string; away: string; homePickers: string[]; awayPickers: string[] };
+  // Upcoming matches split by today vs future
+  const upcomingToday: UpcomingMatch[] = [];
+  const upcomingFuture: UpcomingMatch[] = [];
+  for (let i = 0; i < 16; i++) {
+    if (results.r0[i]) continue;
+    const m = ROUND_OF_32[i];
+    const key = matchDateToSortKey(m.date);
+    const homePickers = brackets.filter(b => b.picks.r0[i] === m.home).map(b => b.name);
+    const awayPickers = brackets.filter(b => b.picks.r0[i] === m.away).map(b => b.name);
+    const entry = { match: `${m.home} vs ${m.away}`, date: m.date, home: m.home, away: m.away, homePickers, awayPickers };
+    if (key === todayKey) upcomingToday.push(entry);
+    else if (key > todayKey) upcomingFuture.push(entry);
+  }
 
   // Champion pick distribution
   const champCounts: Record<string, string[]> = {};
@@ -47,80 +67,67 @@ function buildRecapContext(brackets: Bracket[], results: Results, targetDate: st
   }
   const champSorted = Object.entries(champCounts).sort((a, b) => b[1].length - a[1].length);
 
-  // Current leaderboard (top 5)
+  // Leaderboard top 10
   const scored = brackets
     .map(b => ({ name: b.name, score: calculateScore(b.picks, results) }))
     .sort((a, b) => b.score.points - a.score.points || a.name.localeCompare(b.name))
     .slice(0, 10);
 
-  // Bold / unusual picks
+  // Bold / unusual picks (solo underdog picks, solo champion picks)
   const unusualPicks: string[] = [];
   for (const b of brackets) {
     for (let i = 0; i < 16; i++) {
       const pick = b.picks.r0[i];
       if (!pick) continue;
-      const match = ROUND_OF_32[i];
-      const isUnderdog = pick === match.away; // away team is generally the underdog
+      const m = ROUND_OF_32[i];
       const onlyOne = brackets.filter(br => br.picks.r0[i] === pick).length === 1;
-      if (onlyOne && isUnderdog) {
-        unusualPicks.push(`${b.name} is the ONLY person who picked ${pick} (vs ${pick === match.home ? match.away : match.home})`);
+      if (onlyOne && pick === m.away) {
+        unusualPicks.push(`${b.name} is the ONLY person who picked ${pick} to beat ${m.home}`);
       }
     }
-    // Solo champion pick
     if (b.picks.champion && champCounts[b.picks.champion]?.length === 1) {
-      unusualPicks.push(`${b.name} is the ONLY person picking ${b.picks.champion} 🏆 to win it all`);
+      unusualPicks.push(`${b.name} is the ONLY person picking ${b.picks.champion} to win it all`);
     }
   }
 
-  // Upcoming matches with pick breakdowns
-  const upcoming = ROUND_OF_32
-    .map((m, i) => ({ ...m, i }))
-    .filter(m => !results.r0[m.i]);
-
-  const upcomingWithPicks = upcoming.map(m => {
-    const homePickers = brackets.filter(b => b.picks.r0[m.i] === m.home).map(b => b.name);
-    const awayPickers = brackets.filter(b => b.picks.r0[m.i] === m.away).map(b => b.name);
-    const noPick = brackets.filter(b => !b.picks.r0[m.i]).map(b => b.name);
-    return { ...m, homePickers, awayPickers, noPick };
-  });
-
-  // Next day's matches specifically
-  const tomorrow = upcomingWithPicks.filter(m => {
-    const matchDate = new Date(m.date + ' 2026').getTime();
-    const today = new Date(targetDate + 'T12:00:00Z').getTime();
-    return matchDate >= today;
-  }).slice(0, 6);
+  function renderMatchWithPicks(m: typeof upcomingToday[0]) {
+    return `${m.match} (${m.date})
+  → ${m.home}: ${m.homePickers.length} picks (${m.homePickers.join(', ') || 'nobody'})
+  → ${m.away}: ${m.awayPickers.length} picks (${m.awayPickers.join(', ') || 'nobody'})`;
+  }
 
   return `
-TODAY'S DATE: ${targetDate}
+TODAY'S DATE: ${targetDate} (${todayFormatted})
 TOTAL BRACKETS SUBMITTED: ${brackets.length}
 
-=== MATCHES COMPLETED TODAY ===
-${matchStats.length === 0 ? 'No matches played today yet.' : matchStats.map(s => `
-Match: ${s.match}
-Winner: ${s.winner} ${TEAM_FLAGS[s.winner] || ''}
-Bracket accuracy: ${s.correct}/${s.total} got it right (${Math.round((s.correct / s.total) * 100)}%)
-✅ Correct picks: ${s.correctNames.join(', ')}
-❌ Wrong picks: ${s.wrongNames.join(', ')}
+=== MATCHES COMPLETED TODAY (${todayFormatted}) ===
+${completedToday.length === 0 ? 'None yet today.' : completedToday.map(s => `
+${s.match} → Winner: ${s.winner} ${TEAM_FLAGS[s.winner] || ''}
+  ✅ Got it right (${s.correctNames.length}/${s.total}): ${s.correctNames.join(', ') || 'nobody'}
+  ❌ Got it wrong (${s.wrongNames.length}/${s.total}): ${s.wrongNames.join(', ') || 'nobody'}
 `).join('\n')}
 
+=== PREVIOUSLY COMPLETED MATCHES ===
+${completedPreviously.length === 0 ? 'None.' : completedPreviously.map(s => `
+${s.match} (${s.date}) → Winner: ${s.winner} ${TEAM_FLAGS[s.winner] || ''}
+  ✅ Correct (${s.correctNames.length}/${s.total}): ${s.correctNames.join(', ') || 'nobody'}
+  ❌ Wrong (${s.wrongNames.length}/${s.total}): ${s.wrongNames.join(', ') || 'nobody'}
+`).join('\n')}
+
+=== STILL TO PLAY TODAY (${todayFormatted}) ===
+${upcomingToday.length === 0 ? 'All today\'s matches are done.' : upcomingToday.map(renderMatchWithPicks).join('\n')}
+
+=== UPCOMING MATCHES (AFTER TODAY) ===
+${upcomingFuture.slice(0, 6).map(renderMatchWithPicks).join('\n')}
+
 === CURRENT LEADERBOARD (top 10) ===
-${scored.map((s, i) => `${i + 1}. ${s.name} — ${s.score.points} pts`).join('\n')}
+${scored.map((s, i) => `${i + 1}. ${s.name} — ${s.score.points} pts (${s.score.correct} correct)`).join('\n')}
 
 === CHAMPION PICK DISTRIBUTION ===
 ${champSorted.map(([team, names]) => `${team} ${TEAM_FLAGS[team] || ''}: ${names.length} picks (${names.join(', ')})`).join('\n')}
 
 === BOLD / UNIQUE PICKS ===
-${unusualPicks.length > 0 ? unusualPicks.join('\n') : 'No unique solo picks yet.'}
-
-=== UPCOMING MATCHES WITH BRACKET PREDICTIONS ===
-(Use these to build anticipation — call out who's riding or risking on each match)
-${tomorrow.map(m => `
-${m.home} vs ${m.away} — ${m.date}
-  ${m.home}: ${m.homePickers.length} picker${m.homePickers.length !== 1 ? 's' : ''} (${m.homePickers.join(', ') || 'nobody'})
-  ${m.away}: ${m.awayPickers.length} picker${m.awayPickers.length !== 1 ? 's' : ''} (${m.awayPickers.join(', ') || 'nobody'})
-  ${m.noPick.length > 0 ? `No pick yet: ${m.noPick.join(', ')}` : 'Everyone has a pick'}
-`).join('\n')}
+${unusualPicks.length > 0 ? unusualPicks.join('\n') : 'No solo unique picks yet.'}
 `.trim();
 }
 
