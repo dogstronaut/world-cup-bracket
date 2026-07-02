@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <p>⚽ 2026 FIFA World Cup • USA • Canada • Mexico</p>
           <p className="mt-1">June 28 – July 19, 2026</p>
         </footer>
+        <Analytics />
       </body>
     </html>
   );
